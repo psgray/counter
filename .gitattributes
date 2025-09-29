@@ -1,6 +1,33 @@
+# --- Line ending normalization ---
+# Normalize text files to LF (good cross-platform default)
 * text=auto
-*.dart text eol=lf
-*.sh   text eol=lf
+
+# Explicit overrides
+*.dart   text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.sh     text eol=lf
+*.md     text eol=lf
+*.json   text eol=lf
+*.gradle text eol=lf
+*.java   text eol=lf
+*.kt     text eol=lf
+
+# Keep binary files untouched
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.mp3    binary
+*.mp4    binary
+*.wav    binary
+*.ttf    binary
+*.otf    binary
+*.svg    binary
+
+# --- Flutter/Dart generated files ---
+lib/generated_plugin_registrant.dart linguist-generated=true
 *.config.dart linguist-generated=true
 *.freezed.dart linguist-generated=true
 *.g.dart linguist-generated=true
