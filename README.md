@@ -1,4 +1,4 @@
-# Counter App as Flutter template
+# Counter App - a Flutter template
 
 A simple Flutter counter app scaffold generated with `flutter create`.
 
