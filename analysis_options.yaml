@@ -1,29 +1,27 @@
 # Dart/Flutter lint configuration
-# Uses the official flutter_lints and adds a few project-wide preferences.
 include: package:flutter_lints/flutter.yaml
 
-analyzer:
-  exclude:
-    - build/**
-    - "**/*.g.dart"
-    - "**/*.freezed.dart"
-    - "**/*.gen.dart"
-    - "**/*.gr.dart"
-    - "lib/generated_plugin_registrant.dart"
+#analyzer:
+#  exclude:
+#    - build/**
+#    - "**/*.g.dart"
+#    - "**/*.freezed.dart"
+#    - "**/*.gen.dart"
+#    - "**/*.gr.dart"
+#    - "lib/generated_plugin_registrant.dart"
 
 linter:
   rules:
-    # Style / API usage
-    - always_use_package_imports
-    - avoid_print
-    - prefer_const_constructors
-    - prefer_const_literals_to_create_immutables
-    - prefer_final_locals
-    - directives_ordering
-    - sort_constructors_first
-    - use_super_parameters
-    - omit_local_variable_types
-    - unawaited_futures
-    - unnecessary_late
-    - cancel_subscriptions
-    - close_sinks
+    prefer_const_constructors: true
+    avoid_print: true
+    directives_ordering: true
+    prefer_final_locals: true
+#    always_use_package_imports
+#    prefer_const_literals_to_create_immutables
+#    sort_constructors_first
+#    use_super_parameters
+#    omit_local_variable_types
+#    unawaited_futures
+#    unnecessary_late
+#    cancel_subscriptions
+#    close_sinks

@@ -1,6 +1,6 @@
 # --- Line ending normalization ---
 # Normalize text files to LF (good cross-platform default)
-* text=auto
+* text=auto eol=lf
 
 # Explicit overrides
 *.dart   text eol=lf

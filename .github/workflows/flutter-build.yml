@@ -1,158 +1,208 @@
 name: Flutter Build (All Targets)
 
 on:
-  workflow_dispatch:   # manual trigger
+  workflow_dispatch:
+    inputs:
+      upload_to_release:
+        description: "Attach artifacts to GitHub Release page?"
+        required: true
+        default: "false"
   push:
     branches: [ main ]
-  pull_request:
+    tags: [ 'v*.*.*' ]
+  release:
+    types: [published]
 
 jobs:
-  # --- Android APK job ---
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Set build version
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-build-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Install dependencies
-        run: flutter pub get
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - run: mv build/app/outputs/flutter-apk/app-release.apk build/counter-${{ steps.vars.outputs.version }}-android.apk
 
-      - name: Build APK (release)
-        run: flutter build apk --release
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: counter-${{ steps.vars.outputs.version }}-android
+          path: build/counter-${{ steps.vars.outputs.version }}-android.apk
 
-  # --- Windows EXE job ---
+      - name: Upload APK to GitHub Release
+        if: github.event_name == 'release' || github.event.inputs.upload_to_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/counter-${{ steps.vars.outputs.version }}-android.apk
+
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Set build version
+        id: vars
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-build-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Install dependencies
-        run: flutter pub get
+      - run: flutter pub get
+      - run: flutter config --enable-windows-desktop
+      - run: flutter build windows --release
 
-      - name: Enable Windows desktop
-        run: flutter config --enable-windows-desktop
+      - name: Create Windows ZIP
+        run: powershell Compress-Archive -Path build/windows/runner/Release/* -DestinationPath build/counter-${{ steps.vars.outputs.version }}-windows.zip
 
-      - name: Build Windows (release)
-        run: flutter build windows --release
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release-windows
-          path: build/windows/runner/Release
+          name: counter-${{ steps.vars.outputs.version }}-windows
+          path: build/counter-${{ steps.vars.outputs.version }}-windows.zip
 
-  # --- Linux job ---
+      - name: Upload Windows ZIP to GitHub Release
+        if: github.event_name == 'release' || github.event.inputs.upload_to_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/counter-${{ steps.vars.outputs.version }}-windows.zip
+
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Setup dependencies (Linux)
-        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Set build version
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-build-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Install dependencies
-        run: flutter pub get
+      - run: flutter pub get
+      - run: flutter config --enable-linux-desktop
+      - run: flutter build linux --release
 
-      - name: Enable Linux desktop
-        run: flutter config --enable-linux-desktop
+      - name: Create Linux ZIP
+        run: |
+          cd build/linux/x64/release/bundle
+          zip -r ../../../../counter-${{ steps.vars.outputs.version }}-linux.zip .
 
-      - name: Build Linux (release)
-        run: flutter build linux --release
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release-linux
-          path: build/linux/x64/release/bundle
+          name: counter-${{ steps.vars.outputs.version }}-linux
+          path: build/counter-${{ steps.vars.outputs.version }}-linux.zip
 
-  # --- macOS job ---
+      - name: Upload Linux ZIP to GitHub Release
+        if: github.event_name == 'release' || github.event.inputs.upload_to_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/counter-${{ steps.vars.outputs.version }}-linux.zip
+
   build-macos:
     runs-on: macos-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Set build version
+        id: vars
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-build-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Install dependencies
-        run: flutter pub get
+      - run: flutter pub get
+      - run: flutter config --enable-macos-desktop
+      - run: flutter build macos --release
 
-      - name: Enable macOS desktop
-        run: flutter config --enable-macos-desktop
+      - name: Create macOS ZIP
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../../counter-${{ steps.vars.outputs.version }}-macos.zip *
 
-      - name: Build macOS (release)
-        run: flutter build macos --release
-
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release-macos
-          path: build/macos/Build/Products/Release
+          name: counter-${{ steps.vars.outputs.version }}-macos
+          path: build/counter-${{ steps.vars.outputs.version }}-macos.zip
 
-  # --- Web job ---
+      - name: Upload macOS ZIP to GitHub Release
+        if: github.event_name == 'release' || github.event.inputs.upload_to_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/counter-${{ steps.vars.outputs.version }}-macos.zip
+
   build-web:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Set build version
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-build-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Install dependencies
-        run: flutter pub get
+      - run: flutter pub get
+      - run: flutter config --enable-web
+      - run: flutter build web --release
 
-      - name: Enable Web
-        run: flutter config --enable-web
+      - name: Create Web ZIP
+        run: |
+          cd build/web
+          zip -r ../counter-${{ steps.vars.outputs.version }}-web.zip .
 
-      - name: Build Web (release)
-        run: flutter build web --release
-
-      - name: Upload Web artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release-web
-          path: build/web
+          name: counter-${{ steps.vars.outputs.version }}-web
+          path: build/counter-${{ steps.vars.outputs.version }}-web.zip
+
+      - name: Upload Web ZIP to GitHub Release
+        if: github.event_name == 'release' || github.event.inputs.upload_to_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/counter-${{ steps.vars.outputs.version }}-web.zip
+
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize artifacts
+        run: |
+          echo "## ✅ Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Android APK: counter-*.apk" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows ZIP: counter-*-windows.zip" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux ZIP: counter-*-linux.zip" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS ZIP: counter-*-macos.zip" >> $GITHUB_STEP_SUMMARY
+          echo "- Web ZIP: counter-*-web.zip" >> $GITHUB_STEP_SUMMARY
